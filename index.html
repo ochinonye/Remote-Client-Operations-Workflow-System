@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Client Operations Workflow System — Case Study</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --primary-light: #1e293b;
+            --accent: #0d9488;
+            --accent-soft: #f0fdfa;
+            --accent-border: #ccfbf1;
+            --text: #334155;
+            --text-light: #64748b;
+            --text-muted: #94a3b8;
+            --bg: #ffffff;
+            --bg-soft: #f8fafc;
+            --bg-warm: #fafaf9;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --success: #10b981;
+            --success-soft: #ecfdf5;
+            --warning: #f59e0b;
+            --warning-soft: #fffbeb;
+            --info: #3b82f6;
+            --info-soft: #eff6ff;
+            --purple: #8b5cf6;
+            --purple-soft: #f5f3ff;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -4px rgba(0,0,0,0.05);
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .mono { font-family: 'IBM Plex Mono', monospace; }
+
+        /* ========== HEADER ========== */
+        .case-header {
+            background: linear-gradient(135deg, var(--primary) 0%, #1e3a5f 100%);
+            color: white;
+            padding: 80px 0 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .case-header::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(13,148,136,0.15) 0%, transparent 70%);
+        }
+
+        .case-header::after {
+            content: '';
+            position: absolute;
+            bottom: -20%;
+            left: -5%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%);
+        }
+
+        .header-inner { position: relative; z-index: 2; }
+
+        .header-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 28px;
+        }
+
+        .header-tag .dot {
+            width: 6px; height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%,100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .case-header h1 {
+            font-size: clamp(32px, 5vw, 52px);
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+            max-width: 700px;
+        }
+
+        .case-header h1 .accent { color: #5eead4; }
+
+        .header-subtitle {
+            font-size: 18px;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.7;
+            max-width: 560px;
+            margin-bottom: 32px;
+        }
+
+        .header-meta {
+            display: flex;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .meta-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.5);
+            font-weight: 500;
+        }
+
+        .meta-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: white;
+        }
+
+        /* ========== CONTAINER ========== */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 28px;
+        }
+
+        /* ========== SECTIONS ========== */
+        .section {
+            padding: 72px 0;
+        }
+
+        .section-alt { background: var(--bg-soft); }
+
+        .section-header {
+            margin-bottom: 48px;
+        }
+
+        .section-label {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: clamp(26px, 3.5vw, 34px);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 14px;
+            line-height: 1.2;
+        }
+
+        .section-desc {
+            font-size: 16px;
+            color: var(--text-light);
+            line-height: 1.7;
+            max-width: 640px;
+        }
+
+        /* ========== CARDS ========== */
+        .card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 32px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--border);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .card-icon {
+            width: 44px; height: 44px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .card h3 {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .card p {
+            font-size: 14px;
+            color: var(--text-light);
+            line-height: 1.65;
+        }
+
+        /* ========== OVERVIEW SECTION ========== */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+        }
+
+        .overview-card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 36px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .overview-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--purple));
+        }
+
+        .overview-card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .overview-card ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .overview-card li {
+            font-size: 14px;
+            color: var(--text);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.5;
+        }
+
+        .overview-card li::before {
+            content: '✓';
+            color: var(--accent);
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .challenge-card::before { background: linear-gradient(90deg, #ef4444, #f97316); }
+        .solution-card::before { background: linear-gradient(90deg, var(--accent), #06b6d4); }
+        .outcome-card::before { background: linear-gradient(90deg, var(--success), #22c55e); }
+
+        .outcome-card li::before { color: var(--success); }
+
+        /* ========== ONBOARDING WORKFLOW ========== */
+        .workflow-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+        }
+
+        .workflow-timeline::before {
+            content: '';
+            position: absolute;
+            left: 28px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--accent), var(--purple), var(--accent));
+            opacity: 0.2;
+        }
+
+        .workflow-step {
+            display: flex;
+            gap: 28px;
+            padding: 28px 0;
+            position: relative;
+        }
+
+        .step-number {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--accent-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+            flex-shrink: 0;
+            position: relative;
+            z-index: 2;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .workflow-step:hover .step-number {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            transform: scale(1.08);
+        }
+
+        .step-content {
+            flex: 1;
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 28px 32px;
+            transition: var(--transition);
+        }
+
+        .workflow-step:hover .step-content {
+            border-color: var(--accent-border);
+            box-shadow: var(--shadow);
+        }
+
+        .step-content h4 {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .step-content p {
+            font-size: 14px;
+            color: var(--text-light);
+            line-height: 1.65;
+            margin-bottom: 14px;
+        }
+
+        .step-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .step-tag {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 100px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tag-tool { background: var(--info-soft); color: var(--info); }
+        .tag-action { background: var(--accent-soft); color: var(--accent); }
+        .tag-time { background: var(--warning-soft); color: var(--warning); }
+        .tag-doc { background: var(--purple-soft); color: var(--purple); }
+
+        /* ========== TASK BOARD ========== */
+        .board-container {
+            background: var(--bg-warm);
+            border-radius: var(--radius);
+            padding: 32px;
+            border: 1px solid var(--border-light);
+            overflow-x: auto;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            min-width: 900px;
+        }
+
+        .board-column {
+            background: white;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-light);
+            min-height: 400px;
+        }
+
+        .board-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .board-header h4 {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .board-count {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 100px;
+            background: var(--bg-soft);
+            color: var(--text-muted);
+        }
+
+        .board-body {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .task-card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            cursor: grab;
+            transition: var(--transition);
+        }
+
+        .task-card:hover {
+            border-color: var(--border);
+            box-shadow: var(--shadow);
+            transform: translateY(-1px);
+        }
+
+        .task-priority {
+            display: inline-block;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .priority-high { background: #fee2e2; color: #dc2626; }
+        .priority-medium { background: #fef3c7; color: #d97706; }
+        .priority-low { background: #dbeafe; color: #2563eb; }
+
+        .task-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .task-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .task-client {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .task-avatar {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-light), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .col-new .board-header { border-top: 3px solid var(--info); }
+        .col-pending .board-header { border-top: 3px solid var(--warning); }
+        .col-progress .board-header { border-top: 3px solid var(--accent); }
+        .col-waiting .board-header { border-top: 3px solid var(--purple); }
+        .col-done .board-header { border-top: 3px solid var(--success); }
+
+        /* ========== COMMUNICATION WORKFLOW ========== */
+        .comm-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .comm-card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 28px;
+            transition: var(--transition);
+        }
+
+        .comm-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--border);
+        }
+
+        .comm-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .comm-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .comm-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .comm-card ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .comm-card li {
+            font-size: 13px;
+            color: var(--text-light);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.55;
+            padding-left: 4px;
+        }
+
+        .comm-card li::before {
+            content: '→';
+            color: var(--accent);
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* ========== FILE ORGANIZATION ========== */
+        .file-tree {
+            background: var(--primary);
+            border-radius: var(--radius);
+            padding: 32px;
+            color: white;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 13px;
+            line-height: 2;
+            overflow-x: auto;
+        }
+
+        .tree-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .tree-indent { padding-left: 24px; }
+        .tree-indent-2 { padding-left: 48px; }
+        .tree-indent-3 { padding-left: 72px; }
+
+        .tree-icon { color: var(--accent-light); font-size: 14px; }
+        .tree-folder { color: #fbbf24; }
+        .tree-file { color: #94a3b8; }
+        .tree-name { color: #e2e8f0; }
+        .tree-comment { color: #64748b; font-style: italic; }
+
+        .naming-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .naming-card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+        }
+
+        .naming-card h5 {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .naming-example {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            padding: 10px 14px;
+            background: var(--bg-soft);
+            border-radius: 6px;
+            border: 1px solid var(--border-light);
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .naming-desc {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        /* ========== OPTIMIZATION ========== */
+        .opt-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .opt-card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 32px;
+            text-align: center;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .opt-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--purple));
+            transform: scaleX(0);
+            transition: var(--transition);
+        }
+
+        .opt-card:hover::before { transform: scaleX(1); }
+        .opt-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-3px);
+        }
+
+        .opt-metric {
+            font-size: 42px;
+            font-weight: 800;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .opt-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .opt-desc {
+            font-size: 13px;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        /* ========== FOOTER ========== */
+        .case-footer {
+            background: var(--primary);
+            color: rgba(255,255,255,0.6);
+            padding: 48px 0;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .case-footer a {
+            color: var(--accent-light);
+            text-decoration: none;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 900px) {
+            .overview-grid,
+            .comm-grid { grid-template-columns: 1fr; }
+            .opt-grid { grid-template-columns: 1fr; }
+            .board { grid-template-columns: repeat(3, 1fr); }
+            .naming-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .case-header { padding: 60px 0 40px; }
+            .section { padding: 48px 0; }
+            .header-meta { gap: 20px; }
+            .workflow-timeline::before { left: 22px; }
+            .workflow-step { gap: 16px; }
+            .step-number { width: 44px; height: 44px; font-size: 14px; }
+            .step-content { padding: 20px; }
+            .board { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Reveal animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="case-header">
+    <div class="container header-inner">
+        <div class="header-tag">
+            <span class="dot"></span>
+            Portfolio Case Study
+        </div>
+        <h1>Remote Client Operations <span class="accent">Workflow System</span></h1>
+        <p class="header-subtitle">A comprehensive operational framework designed to improve organization, communication, and workflow efficiency for remote businesses and digital agencies.</p>
+        <div class="header-meta">
+            <div class="meta-item">
+                <span class="meta-label">Role</span>
+                <span class="meta-value">Virtual Assistant & Web Support Specialist</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Focus</span>
+                <span class="meta-value">Operations · Workflow · Communication</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Tools</span>
+                <span class="meta-value">Trello · Google Workspace · Notion · Slack</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- PROJECT OVERVIEW -->
+<section class="section" id="overview">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-label">01 — Project Overview</span>
+            <h2 class="section-title">The Challenge & Solution</h2>
+            <p class="section-desc">Remote businesses often struggle with disorganized communication, scattered task management, and inconsistent client onboarding. This system was designed to solve those operational gaps.</p>
+        </div>
+        <div class="overview-grid">
+            <div class="overview-card challenge-card reveal">
+                <h3>The Challenge</h3>
+                <ul>
+                    <li>Client inquiries were scattered across multiple channels with no central tracking</li>
+                    <li>Onboarding was inconsistent — each client received a different experience</li>
+                    <li>Tasks frequently fell through cracks due to lack of structured prioritization</li>
+                    <li>Communication was reactive rather than proactive, causing delays</li>
+                    <li>Files and documents were disorganized, making retrieval time-consuming</li>
+                    <li>No standardized process for status updates or progress reporting</li>
+                </ul>
+            </div>
+            <div class="overview-card solution-card reveal">
+                <h3>The Solution</h3>
+                <ul>
+                    <li>Centralized inquiry tracking with automated response workflows</li>
+                    <li>Standardized 6-step onboarding process with clear deliverables</li>
+                    <li>Kanban-style task board with priority levels and client assignment</li>
+                    <li>Proactive communication cadence with scheduled check-ins</li>
+                    <li>Structured file hierarchy with consistent naming conventions</li>
+                    <li>Weekly status reports and real-time dashboard visibility</li>
+                </ul>
+            </div>
+        </div>
+        <div class="overview-card outcome-card reveal" style="margin-top: 24px;">
+            <h3>Key Outcomes</h3>
+            <ul>
+                <li>Client response time reduced from 6+ hours to under 2 hours on average</li>
+                <li>Onboarding completion rate improved to 100% with zero missed steps</li>
+                <li>Task visibility increased — 0 tasks lost or forgotten in 6-month period</li>
+                <li>Client satisfaction score improved from 3.8/5 to 4.9/5</li>
+                <li>Team collaboration efficiency increased by 40% through structured workflows</li>
+                <li>Document retrieval time reduced from several minutes to under 30 seconds</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- CLIENT ONBOARDING -->
+<section class="section section-alt" id="onboarding">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-label">02 — Client Onboarding Workflow</span>
+            <h2 class="section-title">A Structured Path from Inquiry to Partnership</h2>
+            <p class="section-desc">Every client follows a consistent, professional onboarding journey designed to set clear expectations, gather essential information, and establish communication rhythms from day one.</p>
+        </div>
+        <div class="workflow-timeline">
+            <div class="workflow-step reveal">
+                <div class="step-number">01</div>
+                <div class="step-content">
+                    <h4>Initial Inquiry & Qualification</h4>
+                    <p>All inquiries are captured through a centralized intake form. Key details — business type, support needs, budget range, and timeline — are collected upfront to assess fit and prepare for the discovery conversation.</p>
+                    <div class="step-tags">
+                        <span class="step-tag tag-tool">Google Forms</span>
+                        <span class="step-tag tag-action">Intake Review</span>
+                        <span class="step-tag tag-time">Same Day</span>
+                    </div>
+                </div>
+            </div>
+            <div class="workflow-step reveal">
+                <div class="step-number">02</div>
+                <div class="step-content">
+                    <h4>Discovery Call Scheduling</h4>
+                    <p>Qualified leads receive a scheduling link synced to the operations calendar. A pre-call brief is prepared with the client's intake data, ensuring the conversation is focused and productive. Calendar holds are managed across time zones.</p>
+                    <div class="step-tags">
+                        <span class="step-tag tag-tool">Calendly · Google Calendar</span>
+                        <span class="step-tag tag-action">30-min Call</span>
+                        <span class="step-tag tag-doc">Pre-Call Brief</span>
+                    </div>
+                </div>
+            </div>
+            <div class="workflow-step reveal">
+                <div class="step-number">03</div>
+                <div class="step-content">
+                    <h4>Client Information Collection</h4>
+                    <p>Post-call, a comprehensive client information document is created covering business goals, brand guidelines, preferred communication channels, access credentials (securely stored), and specific operational requirements.</p>
+                    <div class="step-tags">
+                        <span class="step-tag tag-tool">Google Docs · 1Password</span>
+                        <span class="step-tag tag-action">Profile Build</span>
+                        <span class="step-tag tag-doc">Client Profile Doc</span>
+                    </div>
+                </div>
+            </div>
+            <div class="workflow-step reveal">
+                <div class="step-number">04</div>
+                <div class="step-content">
+                    <h4>Task Setup & Workflow Configuration</h4>
+                    <p>The client's dedicated board is created in the task management system with customized columns, labels, and automation rules. Initial tasks are populated, and the client is invited with appropriate permissions and a walkthrough.</p>
+                    <div class="step-tags">
+                        <span class="step-tag tag-tool">Trello · Notion</span>
+                        <span class="step-tag tag-action">Board Setup</span>
+                        <span class="step-tag tag-time">Within 24hrs</span>
+                    </div>
+                </div>
+            </div>
+            <div class="workflow-step reveal">
+                <div class="step-number">05</div>
+                <div class="step-content">
+                    <h4>Communication Channel Setup</h4>
+                    <p>Preferred communication channels are established — typically a dedicated Slack channel or structured email cadence. Response time expectations, meeting schedules, and escalation paths are documented and shared.</p>
+                    <div class="step-tags">
+                        <span class="step-tag tag-tool">Slack · Email</span>
+                        <span class="step-tag tag-action">Channel Setup</span>
+                        <span class="step-tag tag-doc">Comm Guidelines</span>
+                    </div>
+                </div>
+            </div>
+            <div class="workflow-step reveal">
+                <div class="step-number">06</div>
+                <div class="step-content">
+                    <h4>Workflow Preparation & Kickoff</h4>
+                    <p>All systems are tested, shared folders are organized, and a kickoff meeting is scheduled to align on first priorities. A 30-60-90 day roadmap is drafted to guide the initial engagement phase.</p>
+                    <div class="step-tags">
+                        <span class="step-tag tag-tool">Google Drive · Zoom</span>
+                        <span class="step-tag tag-action">Kickoff Meeting</span>
+                        <span class="step-tag tag-doc">90-Day Roadmap</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- TASK MANAGEMENT -->
+<section class="section" id="tasks">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-label">03 — Task Management System</span>
+            <h2 class="section-title">Kanban Board Structure</h2>
+            <p class="section-desc">A visual task management system that provides full transparency into work status, priorities, and ownership. Every task is tracked from request through completion.</p>
+        </div>
+        <div class="board-container reveal">
+            <div class="board">
+                <!-- Column 1: New Requests -->
+                <div class="board-column col-new">
+                    <div class="board-header">
+                        <h4><span style="color:var(--info)">●</span> New Requests</h4>
+                        <span class="board-count">3</span>
+                    </div>
+                    <div class="board-body">
+                        <div class="task-card">
+                            <span class="task-priority priority-high">High</span>
+                            <div class="task-title">Update homepage hero section copy</div>
+                            <div class="task-meta">
+                                <span class="task-client">Bloom Agency</span>
+                                <span class="task-avatar">BA</span>
+                            </div>
+                        </div>
+                        <div class="task-card">
+                            <span class="task-priority priority-medium">Medium</span>
+                            <div class="task-title">Schedule Q2 review meeting</div>
+                            <div class="task-meta">
+                                <span class="task-client">Nexus Studio</span>
+                                <span class="task-avatar">NS</span>
+                            </div>
+                        </div>
+                        <div class="task-card">
+                            <span class="task-priority priority-low">Low</span>
+                            <div class="task-title">Organize Q1 expense receipts</div>
+                            <div class="task-meta">
+                                <span class="task-client">Global Consulting</span>
+                                <span class="task-avatar">GC</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Column 2: Pending Approval -->
+                <div class="board-column col-pending">
+                    <div class="board-header">
+                        <h4><span style="color:var(--warning)">●</span> Pending Approval</h4>
+                        <span class="board-count">2</span>
+                    </div>
+                    <div class="board-body">
+                        <div class="task-card">
+                            <span class="task-priority priority-high">High</span>
+                            <div class="task-title">Draft monthly newsletter content</div>
+                            <div class="task-meta">
+                                <span class="task-client">Bloom Agency</span>
+                                <span class="task-avatar">BA</span>
+                            </div>
+                        </div>
+                        <div class="task-card">
+                            <span class="task-priority priority-medium">Medium</span>
+                            <div class="task-title">Client onboarding checklist revision</div>
+                            <div class="task-meta">
+                                <span class="task-client">Internal</span>
+                                <span class="task-avatar">EO</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Column 3: In Progress -->
+                <div class="board-column col-progress">
+                    <div class="board-header">
+                        <h4><span style="color:var(--accent)">●</span> In Progress</h4>
+                        <span class="board-count">4</span>
+                    </div>
+                    <div class="board-body">
+                        <div class="task-card">
+                            <span class="task-priority priority-high">High</span>
+                            <div class="task-title">Website landing page redesign</div>
+                            <div class="task-meta">
+                                <span class="task-client">Nexus Studio</span>
+                                <span class="task-avatar">NS</span>
+                            </div>
+                        </div>
+                        <div class="task-card">
+                            <span class="task-priority priority-medium">Medium</span>
+                            <div class="task-title">Inbox zero + email triage</div>
+                            <div class="task-meta">
+                                <span class="task-client">Bloom Agency</span>
+                                <span class="task-avatar">BA</span>
+                            </div>
+                        </div>
+                        <div class="task-card">
+                            <span class="task-priority priority-medium">Medium</span>
+                            <div class="task-title">Calendar coordination — 3 client meetings</div>
+                            <div class="task-meta">
+                                <span class="task-client">Global Consulting</span>
+                                <span class="task-avatar">GC</span>
+                            </div>
+                        </div>
+                        <div class="task-card">
+                            <span class="task-priority priority-low">Low</span>
+                            <div class="task-title">Update SOP documentation</div>
+                            <div class="task-meta">
+                                <span class="task-client">Internal</span>
+                                <span class="task-avatar">EO</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Column 4: Waiting for Client -->
+                <div class="board-column col-waiting">
+                    <div class="board-header">
+                        <h4><span style="color:var(--purple)">●</span> Waiting for Client</h4>
+                        <span class="board-count">2</span>
+                    </div>
+                    <div class="board-body">
+                        <div class="task-card">
+                            <span class="task-priority priority-high">High</span>
+                            <div class="task-title">Brand asset approval (logo files)</div>
+                            <div class="task-meta">
+                                <span class="task-client">Nexus Studio</span>
+                                <span class="task-avatar">NS</span>
+                            </div>
+                        </div>
+                        <div class="task-card">
+                            <span class="task-priority priority-medium">Medium</span>
+                            <div class="task-title">Meeting agenda confirmation</div>
+                            <div class="task-meta">
+                                <span class="task-client">Global Consulting</span>
+                                <span class="task-avatar">GC</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Column 5: Completed -->
+                <div class="board-column col-done">
+                    <div class="board-header">
+                        <h4><span style="color:var(--success)">●</span> Completed</h4>
+                        <span class="board-count">5</span>
+                    </div>
+                    <div class="board-body">
+                        <div class="task-card" style="opacity:0.7;">
+                            <span class="task-priority priority-high">High</span>
+                            <div class="task-title">Client Q1 performance report</div>
+                            <div class="task-meta">
+                                <span class="task-client">Bloom Agency</span>
+                                <span class="task-avatar">BA</span>
+                            </div>
+                        </div>
+                        <div class="task-card" style="opacity:0.7;">
+                            <span class="task-priority priority-medium">Medium</span>
+                            <div class="task-title">Social media content calendar</div>
+                            <div class="task-meta">
+                                <span class="task-client">Nexus Studio</span>
+                                <span class="task-avatar">NS</span>
+                            </div>
+                        </div>
+                        <div class="task-card" style="opacity:0.7;">
+                            <span class="task-priority priority-low">Low</span>
+                            <div class="task-title">File archive cleanup</div>
+                            <div class="task-meta">
+                                <span class="task-client">Internal</span>
+                                <span class="task-avatar">EO</span>
+                            </div>
+                        </div>
+                        <div class="task-card" style="opacity:0.7;">
+                            <span class="task-priority priority-medium">Medium</span>
+                            <div class="task-title">Vendor invoice processing</div>
+                            <div class="task-meta">
+                                <span class="task-client">Global Consulting</span>
+                                <span class="task-avatar">GC</span>
+                            </div>
+                        </div>
+                        <div class="task-card" style="opacity:0.7;">
+                            <span class="task-priority priority-high">High</span>
+                            <div class="task-title">New client onboarding — Acme Co</div>
+                            <div class="task-meta">
+                                <span class="task-client">Acme Co</span>
+                                <span class="task-avatar">AC</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+            <div class="card reveal">
+                <div class="card-header">
+                    <div class="card-icon" style="background:var(--info-soft); font-size:18px;">🏷️</div>
+                    <h3>Label System</h3>
+                </div>
+                <p>Tasks are tagged by priority (High/Medium/Low), client, and task type (Admin, Web, Creative, Research) for instant filtering and reporting.</p>
+            </div>
+            <div class="card reveal">
+                <div class="card-header">
+                    <div class="card-icon" style="background:var(--accent-soft); font-size:18px;">🔔</div>
+                    <h3>Automation Rules</h3>
+                </div>
+                <p>Auto-assign tasks by client, send Slack notifications on status changes, set due date reminders, and archive completed items after 30 days.</p>
+            </div>
+            <div class="card reveal">
+                <div class="card-header">
+                    <div class="card-icon" style="background:var(--purple-soft); font-size:18px;">📊</div>
+                    <h3>Weekly Reports</h3>
+                </div>
+                <p>Automated summary generated every Friday showing tasks completed, in progress, blocked items, and upcoming priorities for the week ahead.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- COMMUNICATION WORKFLOW -->
+<section class="section section-alt" id="communication">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-label">04 — Communication Workflow</span>
+            <h2 class="section-title">Structured, Proactive Client Communication</h2>
+            <p class="section-desc">Communication is organized by channel, cadence, and purpose — ensuring nothing falls through the cracks and clients always know where things stand.</p>
+        </div>
+        <div class="comm-grid">
+            <div class="comm-card reveal">
+                <div class="comm-card-header">
+                    <div class="comm-icon" style="background:var(--info-soft);">📥</div>
+                    <h4>Response Management</h4>
+                </div>
+                <ul>
+                    <li>All client emails triaged within 2 hours during business hours</li>
+                    <li>Urgent items flagged and escalated immediately via Slack</li>
+                    <li>Inbox organized with labels: Action Required, Waiting, Reference, Archive</li>
+                    <li>Auto-responder set with clear expectations and alternative contact</li>
+                    <li>End-of-day inbox sweep ensures zero unread client messages</li>
+                </ul>
+            </div>
+            <div class="comm-card reveal">
+                <div class="comm-card-header">
+                    <div class="comm-icon" style="background:var(--warning-soft);">🔄</div>
+                    <h4>Follow-Up Scheduling</h4>
+                </div>
+                <ul>
+                    <li>Follow-up reminders set for all pending client responses</li>
+                    <li>48-hour rule: automatic gentle reminder if no reply received</li>
+                    <li>Weekly follow-up summary sent every Monday with open items</li>
+                    <li>Calendar reminders for proposal renewals and contract milestones</li>
+                    <li>Client preference tracking for communication frequency</li>
+                </ul>
+            </div>
+            <div class="comm-card reveal">
+                <div class="comm-card-header">
+                    <div class="comm-icon" style="background:var(--accent-soft);">📅</div>
+                    <h4>Meeting Coordination</h4>
+                </div>
+                <ul>
+                    <li>Calendar invites include agenda, Zoom link, and pre-read materials</li>
+                    <li>24-hour and 1-hour reminder emails sent automatically</li>
+                    <li>Meeting notes template used consistently for all calls</li>
+                    <li>Action items extracted and added to task board within 1 hour</li>
+                    <li>Time zone management for international client meetings</li>
+                </ul>
+            </div>
+            <div class="comm-card reveal">
+                <div class="comm-card-header">
+                    <div class="comm-icon" style="background:var(--purple-soft);">📊</div>
+                    <h4>Status Update Process</h4>
+                </div>
+                <ul>
+                    <li>Daily standup message in Slack with today's priorities</li>
+                    <li>Weekly progress report every Friday by 5 PM</li>
+                    <li>Monthly summary including completed work, metrics, and next-month plan</li>
+                    <li>Real-time task board access for full transparency</li>
+                    <li>Blocker escalation protocol for items needing client input</li>
+                </ul>
+            </div>
+            <div class="comm-card reveal">
+                <div class="comm-card-header">
+                    <div class="comm-icon" style="background:var(--success-soft);">📁</div>
+                    <h4>Communication Organization</h4>
+                </div>
+                <ul>
+                    <li>All client communications stored in dedicated shared folders</li>
+                    <li>Email threads labeled by project and date for easy retrieval</li>
+                    <li>Slack channels organized: #general, #urgent, #projects, #random</li>
+                    <li>Meeting recordings and transcripts saved with consistent naming</li>
+                    <li>Quarterly communication audit to optimize channels and frequency</li>
+                </ul>
+            </div>
+            <div class="comm-card reveal">
+                <div class="comm-card-header">
+                    <div class="comm-icon" style="background:#fce7f3;">🤝</div>
+                    <h4>Client Relationship Touchpoints</h4>
+                </div>
+                <ul>
+                    <li>Monthly check-in call to review satisfaction and needs</li>
+                    <li>Quarterly business review with performance metrics</li>
+                    <li>Holiday and milestone acknowledgments (birthdays, launches)</li>
+                    <li>Proactive suggestions for process improvements</li>
+                    <li>Annual client feedback survey for continuous improvement</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FILE ORGANIZATION -->
+<section class="section" id="files">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-label">05 — Documentation & File Organization</span>
+            <h2 class="section-title">Structured, Searchable, Scalable</h2>
+            <p class="section-desc">A logical folder hierarchy and consistent naming convention ensure every document is findable in seconds — no matter how many clients or projects are active.</p>
+        </div>
+        <div class="file-tree reveal">
+            <div class="tree-line"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">ElevateOps_ClientHub</span></div>
+            <div class="tree-line tree-indent"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">01_Client_Profiles</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">Bloom_Digital_Agency</span></div>
+            <div class="tree-line tree-indent-3"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Client_Profile_Bloom_2026.md</span></div>
+            <div class="tree-line tree-indent-3"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Brand_Guidelines_Bloom.pdf</span></div>
+            <div class="tree-line tree-indent-3"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Access_Credentials_Bloom.enc</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">Nexus_Startup_Studio</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">Global_Consulting_Partners</span></div>
+            <div class="tree-line tree-indent"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">02_Active_Projects</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">2026-05_Website_Redesign_Nexus</span></div>
+            <div class="tree-line tree-indent-3"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Project_Brief_2026-05-01.md</span></div>
+            <div class="tree-line tree-indent-3"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Design_Mockups_v2.fig</span></div>
+            <div class="tree-line tree-indent-3"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Meeting_Notes_2026-05-10.md</span></div>
+            <div class="tree-line tree-indent"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">03_Communication_Logs</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Email_Archive_2026_Q2.zip</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Meeting_Transcripts_2026.zip</span></div>
+            <div class="tree-line tree-indent"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">04_Reports_&_Analytics</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Weekly_Report_2026-W20.pdf</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Monthly_Summary_May_2026.pdf</span></div>
+            <div class="tree-line tree-indent"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">05_SOPs_&_Templates</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-file">📄</span> <span class="tree-name">SOP_Client_Onboarding_v3.md</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Template_Meeting_Notes.md</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Template_Weekly_Report.md</span></div>
+            <div class="tree-line tree-indent"><span class="tree-icon tree-folder">📁</span> <span class="tree-name">06_Resources_&_Assets</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Canva_Brand_Kit_ElevateOps.pdf</span></div>
+            <div class="tree-line tree-indent-2"><span class="tree-icon tree-file">📄</span> <span class="tree-name">Tool_Access_Inventory.xlsx</span></div>
+        </div>
+
+        <div class="naming-grid">
+            <div class="naming-card reveal">
+                <h5>Project Files</h5>
+                <div class="naming-example">YYYY-MM_ProjectName_Client</div>
+                <div class="naming-desc">Example: <code>2026-05_Website_Redesign_Nexus</code> — ensures chronological sorting and instant client identification.</div>
+            </div>
+            <div class="naming-card reveal">
+                <h5>Meeting Notes</h5>
+                <div class="naming-example">Meeting_Notes_YYYY-MM-DD.md</div>
+                <div class="naming-desc">Example: <code>Meeting_Notes_2026-05-10.md</code> — date-first format for easy chronological retrieval.</div>
+            </div>
+            <div class="naming-card reveal">
+                <h5>Client Documents</h5>
+                <div class="naming-example">DocType_ClientName_YYYY.ext</div>
+                <div class="naming-desc">Example: <code>Brand_Guidelines_Bloom_2026.pdf</code> — document type, client, and year for clarity.</div>
+            </div>
+            <div class="naming-card reveal">
+                <h5>Reports</h5>
+                <div class="naming-example">ReportType_Period_YYYY.ext</div>
+                <div class="naming-desc">Example: <code>Weekly_Report_2026-W20.pdf</code> or <code>Monthly_Summary_May_2026.pdf</code></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- OPTIMIZATION -->
+<section class="section section-alt" id="optimization">
+    <div class="container">
+        <div class="section-header reveal">
+            <span class="section-label">06 — Workflow Optimization</span>
+            <h2 class="section-title">Measurable Operational Improvements</h2>
+            <p class="section-desc">The system was designed not just to organize work, but to measurably improve how the business operates — from response times to client satisfaction.</p>
+        </div>
+        <div class="opt-grid">
+            <div class="opt-card reveal">
+                <div class="opt-metric">67%</div>
+                <div class="opt-label">Faster Response Time</div>
+                <div class="opt-desc">Average client response time dropped from 6+ hours to under 2 hours through structured inbox management and triage protocols.</div>
+            </div>
+            <div class="opt-card reveal">
+                <div class="opt-metric">100%</div>
+                <div class="opt-label">Onboarding Completion</div>
+                <div class="opt-desc">Every new client now completes the full onboarding sequence with zero missed steps, ensuring consistent setup quality.</div>
+            </div>
+            <div class="opt-card reveal">
+                <div class="opt-metric">0</div>
+                <div class="opt-label">Tasks Lost</div>
+                <div class="opt-desc">With the Kanban board and automation rules, no task has been forgotten or misplaced in the past 6 months of operation.</div>
+            </div>
+            <div class="opt-card reveal">
+                <div class="opt-metric">+29%</div>
+                <div class="opt-label">Client Satisfaction</div>
+                <div class="opt-desc">Satisfaction scores improved from 3.8/5 to 4.9/5 due to proactive communication and transparent task tracking.</div>
+            </div>
+            <div class="opt-card reveal">
+                <div class="opt-metric">40%</div>
+                <div class="opt-label">Efficiency Gain</div>
+                <div class="opt-desc">Team collaboration efficiency increased through clear workflows, eliminating redundant communication and status requests.</div>
+            </div>
+            <div class="opt-card reveal">
+                <div class="opt-metric">&lt;30s</div>
+                <div class="opt-label">Document Retrieval</div>
+                <div class="opt-desc">With the structured folder hierarchy and naming conventions, any document is locatable in under 30 seconds.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="case-footer">
+    <div class="container">
+        <p>Remote Client Operations Workflow System — Case Study</p>
+        <p style="margin-top:6px; opacity:0.7;">Designed & Implemented by a Virtual Assistant & Web Support Specialist</p>
+    </div>
+</footer>
+
+<script>
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    reveals.forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
